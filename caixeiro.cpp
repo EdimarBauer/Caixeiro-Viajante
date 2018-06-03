@@ -15,7 +15,7 @@
 #include <algorithm>
 
 using namespace std;
-#define T 50
+#define T 51
 #define MaxDP 22
 #define fi first
 #define se second
@@ -52,6 +52,8 @@ int atualizaConexoes(int no, int &extrax, int mudado[], int cont);
 void desfazConexoes(int no, int mudado[]);
 void retiraDependente(auto it, int no, int i, int &u, int mudado[]);
 void incluiDependente(auto it, int i, int mudado[]);
+
+bool primeiraIteracao(int &extrax);
 void salva();
 int montarListaAdjacencia();
 int caminhoGuloso(int no, int cont);
@@ -74,7 +76,7 @@ int main(){
     randomizar(peso);
     imprimirMatriz();
 
-    printf("1: Forca Bruta (Max 12 vertices)\n2: Forca Bruta com PD (Max 22 vertices)\n3: Forca Bruta Otimizada (32 vertices or more)\n");
+    printf("1: Forca Bruta (Max 12 vertices)\n2: Forca Bruta com PD (Max 22 vertices)\n3: Forca Bruta Otimizada (Max 50 vertices)\n");
     scanf("%d", &option);
     G = (1 << TamGrafo) - 1;
     Start = clock();
@@ -181,7 +183,7 @@ ipc forcaBrutaDP(int no, int S, int cont){
     if (dp[no-1][S].acumulado) return dp[no-1][S];
 
     if ( (clock() - Start) / CLOCKS_PER_SEC > TIME_LIMIT ){
-        printf("Time excceded %d seconds.\n", TIME_LIMIT);
+        printf("Time limit excceded %d seconds.\n", TIME_LIMIT);
         exit(0);
     }
 
@@ -234,16 +236,14 @@ bool salesman(int no, int cont, int extra){
         }
         return 0;
     }
-
     if ( (clock() - Start) / CLOCKS_PER_SEC > TIME_LIMIT ){
-        printf("Time excceded %d seconds.\nBetter answer found:\n", TIME_LIMIT);
+        printf("Time limit excceded %d seconds.\nBetter answer found:\n", TIME_LIMIT);
         return 1;
     }
-
     visit[no] = 1; Provisorio.push_back(no);
     int x, u = 0, extrax = 0, mudado[T] = {};
     if (no != 1) u = atualizaConexoes(no, extrax, mudado, cont);
-    else extrax = melhorAresta[1][0].fi - melhorAresta[1][1].fi;
+    else if (primeiraIteracao(extrax)) return 1;
 
     if (u > 0){
         //means that exist only one way to be verified
@@ -256,22 +256,10 @@ bool salesman(int no, int cont, int extra){
             x = adj[no][i].se;
             if (!visit[x]){
                 u = matriz[no][x] << 1;
-
-                if (no == 1 && i == 0){
-                    u -= extrax * 2;
-                    melhorAresta[no][0] = melhorAresta[no][1];
-                    Dependente[adj[no][1].se][1] = 0;
-                    Posicao[no]++;
-                }
                 it = Dependente[no].find(x);
                 if (it != Dependente[no].end() && no != 1) retiraDependente(it, no, x, u, mudado);
                 if (salesman(x, cont+1, extra + extrax + u - melhorAresta[no][0].fi - melhorAresta[x][1].fi)) return 1;
                 if (it != Dependente[no].end() && no != 1) incluiDependente(it, x, mudado);
-                if (no == 1 && i == 0){
-                    melhorAresta[no][0] = adj[no][0];
-                    Dependente[adj[no][1].se][1] = 1;
-                    Posicao[no]--;
-                }
             }
         }
     }
@@ -357,6 +345,21 @@ void incluiDependente(auto it, int i, int mudado[]){
 
 
 
+
+bool primeiraIteracao(int &extrax){
+
+    int x = adj[1][0].se;
+    melhorAresta[1][0] = melhorAresta[1][1];
+    Dependente[adj[1][1].se][1] = 0;
+    Posicao[1]++;
+    if (salesman(x, 2, matriz[1][x] - melhorAresta[x][1].fi))
+        return 1;
+    melhorAresta[1][0] = adj[1][0];
+    Dependente[adj[1][1].se][1] = 1;
+    Posicao[1]--;
+    extrax = melhorAresta[1][0].fi - melhorAresta[1][1].fi;
+    return 0;
+}
 
 void salva(){
 
